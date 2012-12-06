@@ -37,13 +37,15 @@
  * @package    PHPUnit
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.3.6
  */
 
 require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPARATOR . 'ExceptionTest.php';
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPARATOR . 'ExceptionNamespaceTest.php';
 require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPARATOR . 'RequirementsTest.php';
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPARATOR . 'RequirementsClassDocBlockTest.php';
 
 /**
  *
@@ -51,8 +53,7 @@ require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPAR
  * @package    PHPUnit
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 3.3.6
  */
@@ -99,28 +100,85 @@ class Util_TestTest extends PHPUnit_Framework_TestCase
           array('class' => 'Class', 'code' => 0, 'message' => 'Message'),
           PHPUnit_Util_Test::getExpectedException('ExceptionTest', 'testEight')
         );
-   }
+        $this->assertSame(
+          array('class' => 'Class', 'code' => ExceptionTest::ERROR_CODE, 'message' => ExceptionTest::ERROR_MESSAGE),
+          PHPUnit_Util_Test::getExpectedException('ExceptionTest', 'testNine')
+        );
+        $this->assertSame(
+            array('class' => 'Class', 'code' => My\Space\ExceptionNamespaceTest::ERROR_CODE, 'message' => My\Space\ExceptionNamespaceTest::ERROR_MESSAGE),
+            PHPUnit_Util_Test::getExpectedException('My\Space\ExceptionNamespaceTest', 'testConstants')
+        );
+        // Ensure the Class::CONST expression is only evaluated when the constant really exists
+        $this->assertSame(
+            array('class' => 'Class', 'code' => 'ExceptionTest::UNKNOWN_CODE_CONSTANT', 'message' => 'ExceptionTest::UNKNOWN_MESSAGE_CONSTANT'),
+            PHPUnit_Util_Test::getExpectedException('ExceptionTest', 'testUnknownConstants')
+        );
+        $this->assertSame(
+            array('class' => 'Class', 'code' => 'My\Space\ExceptionNamespaceTest::UNKNOWN_CODE_CONSTANT', 'message' => 'My\Space\ExceptionNamespaceTest::UNKNOWN_MESSAGE_CONSTANT'),
+            PHPUnit_Util_Test::getExpectedException('My\Space\ExceptionNamespaceTest', 'testUnknownConstants')
+        );
+    }
 
-    public function testGetRequirements()
+    public function provideRequirements()
+    {
+        return array(
+            array('testOne',   array()),
+            array('testTwo',   array('PHPUnit' => '1.0')),
+            array('testThree', array('PHP' => '2.0')),
+            array('testFour',  array('PHPUnit'=>'2.0', 'PHP' => '1.0')),
+            array('testFive',  array('PHP' => '5.4.0RC6')),
+            array('testSix',   array('PHP' => '5.4.0-alpha1')),
+            array('testSeven', array('PHP' => '5.4.0beta2')),
+            array('testEight', array('PHP' => '5.4-dev')),
+            array('testNine',  array('functions' => array('testFunc'))),
+            array('testTen',   array('extensions' => array('testExt'))),
+            array(
+                'testAllPossibleRequirements',
+                array(
+                    'PHP' => '99-dev',
+                    'PHPUnit' => '9-dev',
+                    'functions' => array(
+                        'testFuncOne',
+                        'testFuncTwo',
+                    ),
+                    'extensions' => array(
+                        'testExtOne',
+                        'testExtTwo',
+                    )
+                )
+            )
+        );
+    }
+
+    /**
+     * @dataProvider provideRequirements
+     */
+    public function testGetRequirements($test, $result)
     {
         $this->assertEquals(
-          array(),
-          PHPUnit_Util_Test::getRequirements('RequirementsTest', 'testOne')
+          $result,
+          PHPUnit_Util_Test::getRequirements('RequirementsTest', $test)
+        );
+    }
+
+    public function testGetRequirementsMergesClassAndMethodDocBlocks()
+    {
+        $expectedAnnotations = array(
+            'PHP' => '5.4',
+            'PHPUnit' => '3.7',
+            'functions' => array(
+                'testFuncClass',
+                'testFuncMethod',
+            ),
+            'extensions' => array(
+                'testExtClass',
+                'testExtMethod',
+            )
         );
 
         $this->assertEquals(
-          array('PHPUnit' => '1.0'),
-          PHPUnit_Util_Test::getRequirements('RequirementsTest', 'testTwo')
-        );
-
-        $this->assertEquals(
-          array('PHP' => '2.0'),
-          PHPUnit_Util_Test::getRequirements('RequirementsTest', 'testThree')
-        );
-
-        $this->assertEquals(
-          array('PHPUnit'=>'2.0', 'PHP' => '1.0'),
-          PHPUnit_Util_Test::getRequirements('RequirementsTest', 'testFour')
+          $expectedAnnotations,
+          PHPUnit_Util_Test::getRequirements('RequirementsClassDocBlockTest', 'testMethod')
         );
     }
 

@@ -38,7 +38,7 @@
  * @subpackage Framework
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 2.0.0
  */
@@ -91,8 +91,7 @@
  * @subpackage Framework
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 2.0.0
  */
@@ -190,18 +189,16 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
     private $expectedExceptionCode;
 
     /**
-     * The required version of PHP.
+     * The required preconditions for a test.
      *
-     * @var string
+     * @var array
      */
-    private $requiredPhp = '';
-
-    /**
-     * The required version of PHPUnit.
-     *
-     * @var string
-     */
-    private $requiredPhpUnit = '';
+    private $required = array(
+        'PHP' => NULL,
+        'PHPUnit' => NULL,
+        'functions' => array(),
+        'extensions' => array()
+    );
 
     /**
      * The name of the test case.
@@ -234,6 +231,11 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
      * @var array
      */
     private $mockObjects = array();
+
+    /**
+     * @var array
+     */
+    private $mockObjectGenerator;
 
     /**
      * @var integer
@@ -303,8 +305,9 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
             $this->setName($name);
         }
 
-        $this->data     = $data;
-        $this->dataName = $dataName;
+        $this->data                = $data;
+        $this->dataName            = $dataName;
+        $this->mockObjectGenerator = new PHPUnit_Framework_MockObject_Generator;
     }
 
     /**
@@ -560,11 +563,19 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
             );
 
             if (isset($requirements['PHP'])) {
-                $this->requiredPhp = $requirements['PHP'];
+                $this->required['PHP'] = $requirements['PHP'];
             }
 
             if (isset($requirements['PHPUnit'])) {
-                $this->requiredPhpUnit = $requirements['PHPUnit'];
+                $this->required['PHPUnit'] = $requirements['PHPUnit'];
+            }
+
+            if (isset($requirements['extensions'])) {
+                $this->required['extensions'] = $requirements['extensions'];
+            }
+
+            if (isset($requirements['functions'])) {
+                $this->required['functions'] = $requirements['functions'];
             }
         }
 
@@ -579,23 +590,48 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
     {
         $this->setRequirementsFromAnnotation();
 
-        if ($this->requiredPhp &&
-            version_compare(PHP_VERSION, $this->requiredPhp, '<')) {
-            $this->markTestSkipped(
-              sprintf(
-                'PHP %s (or later) is required.',
-                $this->requiredPhp
-              )
+        $missingRequirements = array();
+
+        if ($this->required['PHP'] &&
+            version_compare(PHP_VERSION, $this->required['PHP'], '<')) {
+            $missingRequirements[] = sprintf(
+              'PHP %s (or later) is required.',
+              $this->required['PHP']
             );
         }
 
         $phpunitVersion = PHPUnit_Runner_Version::id();
-        if ($this->requiredPhpUnit &&
-            version_compare($phpunitVersion, $this->requiredPhpUnit, '<')) {
+        if ($this->required['PHPUnit'] &&
+            version_compare($phpunitVersion, $this->required['PHPUnit'], '<')) {
+            $missingRequirements[] = sprintf(
+              'PHPUnit %s (or later) is required.',
+              $this->required['PHPUnit']
+            );
+        }
+
+        foreach ($this->required['functions'] as $requiredFunction) {
+            if (!function_exists($requiredFunction)) {
+                $missingRequirements[] = sprintf(
+                  'Function %s is required.',
+                  $requiredFunction
+                );
+            }
+        }
+
+        foreach ($this->required['extensions'] as $requiredExtension) {
+            if (!extension_loaded($requiredExtension)) {
+                $missingRequirements[] = sprintf(
+                  'Extension %s is required.',
+                  $requiredExtension
+                );
+            }
+        }
+
+        if ($missingRequirements) {
             $this->markTestSkipped(
-              sprintf(
-                'PHPUnit %s (or later) is required.',
-                $this->requiredPhpUnit
+              implode(
+                PHP_EOL,
+                $missingRequirements
               )
             );
         }
@@ -817,6 +853,9 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
             $this->statusMessage = $e->getMessage();
         }
 
+        // Clean up the mock objects.
+        $this->mockObjects = array();
+
         // Tear down the fixture. An exception raised in tearDown() will be
         // caught and passed on when no exception was raised before.
         try {
@@ -955,17 +994,15 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
             }
 
             if ($checkException) {
-                $checkExceptionMessage = is_string($this->expectedExceptionMessage) && !empty($this->expectedExceptionMessage);
-              
                 $this->assertThat(
                   $e,
                   new PHPUnit_Framework_Constraint_Exception(
                     $this->expectedException
-                  ),
-                  (!$checkExceptionMessage ? $e->getMessage() : '')
+                  )
                 );
 
-                if ($checkExceptionMessage) {
+                if (is_string($this->expectedExceptionMessage) &&
+                    !empty($this->expectedExceptionMessage)) {
                     $this->assertThat(
                       $e,
                       new PHPUnit_Framework_Constraint_ExceptionMessage(
@@ -1016,8 +1053,6 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
             $mockObject->__phpunit_verify();
             $mockObject->__phpunit_cleanup();
         }
-
-        $this->mockObjects = array();
     }
 
     /**
@@ -1268,9 +1303,9 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
      * @throws PHPUnit_Framework_Exception
      * @since  Method available since Release 3.0.0
      */
-    public function getMock($originalClassName, $methods = array(), array $arguments = array(), $mockClassName = '', $callOriginalConstructor = TRUE, $callOriginalClone = TRUE, $callAutoload = TRUE, $cloneArguments = TRUE)
+    public function getMock($originalClassName, $methods = array(), array $arguments = array(), $mockClassName = '', $callOriginalConstructor = TRUE, $callOriginalClone = TRUE, $callAutoload = TRUE, $cloneArguments = FALSE)
     {
-        $mockObject = PHPUnit_Framework_MockObject_Generator::getMock(
+        $mockObject = $this->mockObjectGenerator->getMock(
           $originalClassName,
           $methods,
           $arguments,
@@ -1315,7 +1350,7 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
      * @throws PHPUnit_Framework_Exception
      * @since  Method available since Release 3.5.0
      */
-    protected function getMockClass($originalClassName, $methods = array(), array $arguments = array(), $mockClassName = '', $callOriginalConstructor = FALSE, $callOriginalClone = TRUE, $callAutoload = TRUE, $cloneArguments = TRUE)
+    protected function getMockClass($originalClassName, $methods = array(), array $arguments = array(), $mockClassName = '', $callOriginalConstructor = FALSE, $callOriginalClone = TRUE, $callAutoload = TRUE, $cloneArguments = FALSE)
     {
         $mock = $this->getMock(
           $originalClassName,
@@ -1348,9 +1383,9 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
      * @since  Method available since Release 3.4.0
      * @throws PHPUnit_Framework_Exception
      */
-    public function getMockForAbstractClass($originalClassName, array $arguments = array(), $mockClassName = '', $callOriginalConstructor = TRUE, $callOriginalClone = TRUE, $callAutoload = TRUE, $mockedMethods = array(), $cloneArguments = TRUE)
+    public function getMockForAbstractClass($originalClassName, array $arguments = array(), $mockClassName = '', $callOriginalConstructor = TRUE, $callOriginalClone = TRUE, $callAutoload = TRUE, $mockedMethods = array(), $cloneArguments = FALSE)
     {
-        $mockObject = PHPUnit_Framework_MockObject_Generator::getMockForAbstractClass(
+        $mockObject = $this->mockObjectGenerator->getMockForAbstractClass(
           $originalClassName,
           $arguments,
           $mockClassName,
@@ -1385,11 +1420,13 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
             );
         }
 
-        eval(
-          PHPUnit_Framework_MockObject_Generator::generateClassFromWsdl(
-            $wsdlFile, $originalClassName, $methods
-          )
-        );
+        if (!class_exists($originalClassName)) {
+          eval(
+            $this->mockObjectGenerator->generateClassFromWsdl(
+              $wsdlFile, $originalClassName, $methods
+            )
+          );
+        }
 
         return $this->getMock(
           $originalClassName,
@@ -1416,9 +1453,9 @@ abstract class PHPUnit_Framework_TestCase extends PHPUnit_Framework_Assert imple
      * @since  Method available since Release 3.6.0
      * @throws PHPUnit_Framework_Exception
      */
-    protected function getObjectForTrait($traitName, array $arguments = array(), $traitClassName = '', $callOriginalConstructor = TRUE, $callOriginalClone = TRUE, $callAutoload = TRUE, $cloneArguments = TRUE)
+    protected function getObjectForTrait($traitName, array $arguments = array(), $traitClassName = '', $callOriginalConstructor = TRUE, $callOriginalClone = TRUE, $callAutoload = TRUE, $cloneArguments = FALSE)
     {
-        return PHPUnit_Framework_MockObject_Generator::getObjectForTrait(
+        return $this->mockObjectGenerator->getObjectForTrait(
           $traitName,
           $arguments,
           $traitClassName,

@@ -38,7 +38,7 @@
  * @subpackage TextUI
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.0.0
  */
@@ -51,8 +51,7 @@
  * @subpackage TextUI
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 3.0.0
  */
@@ -86,6 +85,7 @@ class PHPUnit_TextUI_Command
       'debug' => NULL,
       'exclude-group=' => NULL,
       'filter=' => NULL,
+      'testsuite=' => NULL,
       'group=' => NULL,
       'help' => NULL,
       'include-path=' => NULL,
@@ -106,6 +106,7 @@ class PHPUnit_TextUI_Command
       'testdox' => NULL,
       'testdox-html=' => NULL,
       'testdox-text=' => NULL,
+      'test-suffix=' => NULL,
       'no-configuration' => NULL,
       'no-globals-backup' => NULL,
       'printer=' => NULL,
@@ -144,7 +145,8 @@ class PHPUnit_TextUI_Command
         } else {
             $suite = $runner->getTest(
               $this->arguments['test'],
-              $this->arguments['testFile']
+              $this->arguments['testFile'],
+              $this->arguments['testSuffixes']
             );
         }
 
@@ -306,6 +308,7 @@ class PHPUnit_TextUI_Command
 
                             $this->arguments['coverageText'] = $option[1];
                             $this->arguments['coverageTextShowUncoveredFiles'] = FALSE;
+                            $this->arguments['coverageTextShowOnlySummary'] = FALSE;
                         }
                         break;
                     }
@@ -342,6 +345,11 @@ class PHPUnit_TextUI_Command
                 }
                 break;
 
+                case '--testsuite': {
+                    $this->arguments['testsuite'] = $option[1];
+                }
+                break;
+
                 case '--group': {
                     $this->arguments['groups'] = explode(',', $option[1]);
                 }
@@ -349,6 +357,13 @@ class PHPUnit_TextUI_Command
 
                 case '--exclude-group': {
                     $this->arguments['excludeGroups'] = explode(
+                      ',', $option[1]
+                    );
+                }
+                break;
+
+                case '--test-suffix': {
+                    $this->arguments['testSuffixes'] = explode(
                       ',', $option[1]
                     );
                 }
@@ -400,10 +415,7 @@ class PHPUnit_TextUI_Command
                 break;
 
                 case '--stderr': {
-                    $this->arguments['printer'] = new PHPUnit_TextUI_ResultPrinter(
-                      'php://stderr',
-                      isset($this->arguments['verbose']) ? $this->arguments['verbose'] : FALSE
-                    );
+                    $this->arguments['stderr'] = TRUE;
                 }
                 break;
 
@@ -497,17 +509,18 @@ class PHPUnit_TextUI_Command
             }
         }
 
+        if (isset($this->arguments['stderr'])) {
+            $this->arguments['printer'] = new PHPUnit_TextUI_ResultPrinter(
+              'php://stderr',
+              isset($this->arguments['verbose']) ?: FALSE,
+              isset($this->arguments['colors']) ?: FALSE,
+              isset($this->arguments['debug']) ?: FALSE
+            );
+        }
+
         $this->handleCustomTestSuite();
 
         if (!isset($this->arguments['test'])) {
-            if (count($this->options[1]) > 2) {
-                $this->showMessage(
-                    'More than two positional arguments provided.',
-                    FALSE
-                );
-                $this->showHelp();
-                exit(PHPUnit_TextUI_TestRunner::FAILURE_EXIT);
-            }
 
             if (isset($this->options[1][0])) {
                 $this->arguments['test'] = $this->options[1][0];
@@ -525,6 +538,10 @@ class PHPUnit_TextUI_Command
                 $this->arguments['testFile'] = realpath($this->arguments['test']);
                 $this->arguments['test']     = substr($this->arguments['test'], 0, strrpos($this->arguments['test'], '.'));
             }
+        }
+
+        if (!isset($this->arguments['testSuffixes'])) {
+            $this->arguments['testSuffixes'] = array('Test.php', '.phpt');
         }
 
         if (isset($includePath)) {
@@ -644,7 +661,7 @@ class PHPUnit_TextUI_Command
             }
 
             if (!isset($this->arguments['test'])) {
-                $testSuite = $configuration->getTestSuiteConfiguration();
+                $testSuite = $configuration->getTestSuiteConfiguration(isset($this->arguments['testsuite']) ? $this->arguments['testsuite'] : null);
 
                 if ($testSuite !== NULL) {
                     $this->arguments['test'] = $testSuite;
@@ -838,9 +855,12 @@ Usage: phpunit [switches] UnitTest [UnitTest.php]
   --testdox-text <file>     Write agile documentation in Text format to file.
 
   --filter <pattern>        Filter which tests to run.
+  --testsuite <pattern>     Filter which testsuite to run.
   --group ...               Only runs tests from the specified group(s).
   --exclude-group ...       Exclude tests from the specified group(s).
   --list-groups             List available test groups.
+  --test-suffix ...         Only search for test in files with specified
+                            suffix(es). Default: Test.php,.phpt
 
   --loader <loader>         TestSuiteLoader implementation to use.
   --printer <printer>       TestSuiteListener implementation to use.
@@ -857,7 +877,7 @@ Usage: phpunit [switches] UnitTest [UnitTest.php]
   --stop-on-incomplete      Stop execution upon first incomplete test.
   --strict                  Run tests in strict mode.
   -v|--verbose              Output more verbose information.
-  --debug                   Display debbuging information during test execution.
+  --debug                   Display debugging information during test execution.
 
   --process-isolation       Run each test in a separate PHP process.
   --no-globals-backup       Do not backup and restore \$GLOBALS for each test.
@@ -871,8 +891,6 @@ Usage: phpunit [switches] UnitTest [UnitTest.php]
 
   -h|--help                 Prints this usage information.
   --version                 Prints the version and exits.
-
-  --debug                   Output debugging information.
 
 EOT;
     }

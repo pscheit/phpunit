@@ -38,7 +38,7 @@
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @author     Bernhard Schussek <bschussek@2bepublished.at>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 2.0.0
  */
@@ -58,8 +58,7 @@ require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPAR
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @author     Bernhard Schussek <bschussek@2bepublished.at>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 2.0.0
  */
@@ -153,6 +152,28 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
 
         $this->fail();
     }
+    /**
+     * @covers PHPUnit_Framework_Assert::assertContainsOnlyInstancesOf
+     */
+    public function testAssertContainsOnlyInstancesOf()
+    {
+        $test = array(
+            new Book(),
+            new Book
+        );
+        $this->assertContainsOnlyInstancesOf('Book', $test);
+        $this->assertContainsOnlyInstancesOf('stdClass', array(new stdClass()));
+
+        $test2 = array(
+            new Author('Test')
+        );
+        try {
+            $this->assertContainsOnlyInstancesOf('Book', $test2);
+        } catch (PHPUnit_Framework_AssertionFailedError $e) {
+            return;
+        }
+        $this->fail();
+    }
 
     /**
      * @covers            PHPUnit_Framework_Assert::assertArrayHasKey
@@ -242,6 +263,48 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
         }
 
         $this->fail();
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertArrayHasKey
+     */
+    public function testAssertArrayHasKeyAcceptsArrayAccessValue()
+    {
+        $array = new ArrayObject();
+        $array['foo'] = 'bar';
+        $this->assertArrayHasKey('foo', $array);
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertArrayHasKey
+     * @expectedException PHPUnit_Framework_AssertionFailedError
+     */
+    public function testAssertArrayHasKeyProperlyFailsWithArrayAccessValue()
+    {
+        $array = new ArrayObject();
+        $array['bar'] = 'bar';
+        $this->assertArrayHasKey('foo', $array);
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertArrayNotHasKey
+     */
+    public function testAssertArrayNotHasKeyAcceptsArrayAccessValue()
+    {
+        $array = new ArrayObject();
+        $array['foo'] = 'bar';
+        $this->assertArrayNotHasKey('bar', $array);
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertArrayNotHasKey
+     * @expectedException PHPUnit_Framework_AssertionFailedError
+     */
+    public function testAssertArrayNotHasKeyPropertlyFailsWithArrayAccessValue()
+    {
+        $array = new ArrayObject();
+        $array['bar'] = 'bar';
+        $this->assertArrayNotHasKey('bar', $array);
     }
 
     /**
@@ -408,6 +471,15 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * @covers            PHPUnit_Framework_Assert::assertContainsOnlyInstancesOf
+     * @expectedException PHPUnit_Framework_Exception
+     */
+    public function testAssertContainsOnlyInstancesOfThrowsException()
+    {
+        $this->assertContainsOnlyInstancesOf(NULL, NULL);
+    }
+
+    /**
      * @covers PHPUnit_Framework_Assert::assertContainsOnly
      */
     public function testAssertArrayContainsOnlyIntegers()
@@ -423,15 +495,6 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
         }
 
         $this->fail();
-    }
-
-    /**
-     * @covers            PHPUnit_Framework_Assert::assertNotContainsOnly
-     * @expectedException PHPUnit_Framework_Exception
-     */
-    public function testAssertNotContainsOnlyThrowsException()
-    {
-        $this->assertNotContainsOnly(NULL, NULL);
     }
 
     /**
@@ -1584,6 +1647,8 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
 
     /**
      * @covers PHPUnit_Framework_Assert::readAttribute
+     * @covers PHPUnit_Framework_Assert::getStaticAttribute
+     * @covers PHPUnit_Framework_Assert::getObjectAttribute
      */
     public function testReadAttribute()
     {
@@ -1598,6 +1663,8 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
 
     /**
      * @covers PHPUnit_Framework_Assert::readAttribute
+     * @covers PHPUnit_Framework_Assert::getStaticAttribute
+     * @covers PHPUnit_Framework_Assert::getObjectAttribute
      */
     public function testReadAttribute2()
     {
@@ -1610,6 +1677,8 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
 
     /**
      * @covers            PHPUnit_Framework_Assert::readAttribute
+     * @covers            PHPUnit_Framework_Assert::getStaticAttribute
+     * @covers            PHPUnit_Framework_Assert::getObjectAttribute
      * @expectedException PHPUnit_Framework_Exception
      */
     public function testReadAttribute3()
@@ -1619,6 +1688,8 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
 
     /**
      * @covers            PHPUnit_Framework_Assert::readAttribute
+     * @covers            PHPUnit_Framework_Assert::getStaticAttribute
+     * @covers            PHPUnit_Framework_Assert::getObjectAttribute
      * @expectedException PHPUnit_Framework_Exception
      */
     public function testReadAttribute4()
@@ -1628,6 +1699,8 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
 
     /**
      * @covers            PHPUnit_Framework_Assert::readAttribute
+     * @covers            PHPUnit_Framework_Assert::getStaticAttribute
+     * @covers            PHPUnit_Framework_Assert::getObjectAttribute
      * @expectedException PHPUnit_Framework_Exception
      */
     public function testReadAttribute5()
@@ -2533,6 +2606,14 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
     {
         $this->assertThat(array('foo'), $this->containsOnly('string'));
     }
+    /**
+     * @covers PHPUnit_Framework_Assert::assertThat
+     * @covers PHPUnit_Framework_Assert::containsOnlyInstancesOf
+     */
+    public function testAssertThatContainsOnlyInstancesOf()
+    {
+        $this->assertThat(array(new Book), $this->containsOnlyInstancesOf('Book'));
+    }
 
     /**
      * @covers PHPUnit_Framework_Assert::assertThat
@@ -2897,6 +2978,21 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
     {
         $matcher = array('tag' => 'head',
                          'parent' => array('tag' => 'div'));
+        $this->assertTag($matcher, $this->html);
+    }
+
+    /**
+    * @covers PHPUnit_Framework_Assert::assertTag
+    */
+    public function testAssertTagMultiplePossibleChildren()
+    {
+        $matcher = array(
+            'tag' => 'li',
+            'parent' => array(
+                'tag' => 'ul',
+                'id' => 'another_ul'
+            )
+        );
         $this->assertTag($matcher, $this->html);
     }
 
@@ -3720,16 +3816,15 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
     public function testAssertStringMatchesFormat()
     {
         $this->assertStringMatchesFormat('*%s*', '***');
+    }
 
-        try {
-            $this->assertStringMatchesFormat('*%s*', '**');
-        }
-
-        catch (PHPUnit_Framework_AssertionFailedError $e) {
-            return;
-        }
-
-        $this->fail();
+    /**
+     * @covers PHPUnit_Framework_Assert::assertStringMatchesFormat
+     * @expectedException PHPUnit_Framework_AssertionFailedError
+     */
+    public function testAssertStringMatchesFormatFailure()
+    {
+        $this->assertStringMatchesFormat('*%s*', '**');
     }
 
     /**
@@ -3895,7 +3990,7 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
         }
 
         catch (PHPUnit_Framework_Exception $e) {
-            $this->assertEquals('Argument #1 of PHPUnit_Framework_Assert::assertCount() must be a integer', $e->getMessage());
+            $this->assertEquals('Argument #1 (No Value) of PHPUnit_Framework_Assert::assertCount() must be a integer', $e->getMessage());
 
             return;
         }
@@ -3915,11 +4010,159 @@ class Framework_AssertTest extends PHPUnit_Framework_TestCase
         }
 
         catch (PHPUnit_Framework_Exception $e) {
-            $this->assertEquals('Argument #2 of PHPUnit_Framework_Assert::assertCount() must be a countable', $e->getMessage());
+            $this->assertEquals('Argument #2 (No Value) of PHPUnit_Framework_Assert::assertCount() must be a countable', $e->getMessage());
 
             return;
         }
 
         $this->fail();
     }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonStringEqualsJsonString
+     */
+    public function testAssertJsonStringEqualsJsonString()
+    {
+        $expected = '{"Mascott" : "Tux"}';
+        $actual   = '{"Mascott" : "Tux"}';
+        $message  = 'Given Json strings do not match';
+
+        $this->assertJsonStringEqualsJsonString($expected, $actual, $message);
+    }
+
+    /**
+     * @dataProvider validInvalidJsonDataprovider
+     * @covers PHPUnit_Framework_Assert::assertJsonStringEqualsJsonString
+     */
+    public function testAssertJsonStringEqualsJsonStringErrorRaised($expected, $actual)
+    {
+        try {
+            $this->assertJsonStringEqualsJsonString($expected, $actual);
+        } catch (PHPUnit_Framework_ExpectationFailedException $e) {
+            return;
+        }
+        $this->fail('Expected exception not found');
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonStringNotEqualsJsonString
+     */
+    public function testAssertJsonStringNotEqualsJsonString()
+    {
+        $expected = '{"Mascott" : "Beastie"}';
+        $actual   = '{"Mascott" : "Tux"}';
+        $message  = 'Given Json strings do match';
+
+        $this->assertJsonStringNotEqualsJsonString($expected, $actual, $message);
+    }
+
+    /**
+     * @dataProvider validInvalidJsonDataprovider
+     * @covers PHPUnit_Framework_Assert::assertJsonStringNotEqualsJsonString
+     */
+    public function testAssertJsonStringNotEqualsJsonStringErrorRaised($expected, $actual)
+    {
+        $this->assertJsonStringNotEqualsJsonString($expected, $actual);
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonStringEqualsJsonFile
+     */
+    public function testAssertJsonStringEqualsJsonFile()
+    {
+        $file = __DIR__ . '/../_files/JsonData/simpleObject.js';
+        $actual = json_encode(array("Mascott" => "Tux"));
+        $message = '';
+        $this->assertJsonStringEqualsJsonFile($file, $actual, $message);
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonStringEqualsJsonFile
+     */
+    public function testAssertJsonStringEqualsJsonFileExpectingExpectationFailedException()
+    {
+        $file = __DIR__ . '/../_files/JsonData/simpleObject.js';
+        $actual = json_encode(array("Mascott" => "Beastie"));
+        $message = '';
+        try {
+            $this->assertJsonStringEqualsJsonFile($file, $actual, $message);
+        } catch (PHPUnit_Framework_ExpectationFailedException $e) {
+            $this->assertEquals(
+                'Failed asserting that \'{"Mascott":"Beastie"}\' matches JSON string "{"Mascott":"Tux"}".',
+                $e->getMessage()
+            );
+            return;
+        }
+
+        $this->fail('Expected Exception not thrown.');
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonStringEqualsJsonFile
+     */
+    public function testAssertJsonStringEqualsJsonFileExpectingException()
+    {
+        $file = __DIR__ . '/../_files/JsonData/simpleObject.js';
+        try {
+            $this->assertJsonStringEqualsJsonFile($file, NULL);
+        } catch (PHPUnit_Framework_Exception $e) {
+            return;
+        }
+        $this->fail('Expected Exception not thrown.');
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonStringNotEqualsJsonFile
+     */
+    public function testAssertJsonStringNotEqualsJsonFile()
+    {
+        $file = __DIR__ . '/../_files/JsonData/simpleObject.js';
+        $actual = json_encode(array("Mascott" => "Beastie"));
+        $message = '';
+        $this->assertJsonStringNotEqualsJsonFile($file, $actual, $message);
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonStringNotEqualsJsonFile
+     */
+    public function testAssertJsonStringNotEqualsJsonFileExpectingException()
+    {
+        $file = __DIR__ . '/../_files/JsonData/simpleObject.js';
+        try {
+            $this->assertJsonStringNotEqualsJsonFile($file, NULL);
+        } catch (PHPUnit_Framework_Exception $e) {
+            return;
+        }
+        $this->fail('Expected exception not found.');
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonFileNotEqualsJsonFile
+     */
+    public function testAssertJsonFileNotEqualsJsonFile()
+    {
+        $fileExpected = __DIR__ . '/../_files/JsonData/simpleObject.js';
+        $fileActual   = __DIR__ . '/../_files/JsonData/arrayObject.js';
+        $message = '';
+        $this->assertJsonFileNotEqualsJsonFile($fileExpected, $fileActual, $message);
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Assert::assertJsonFileEqualsJsonFile
+     */
+    public function testAssertJsonFileEqualsJsonFile()
+    {
+        $file = __DIR__ . '/../_files/JsonData/simpleObject.js';
+        $message = '';
+        $this->assertJsonFileEqualsJsonFile($file, $file, $message);
+    }
+
+    public static function validInvalidJsonDataprovider()
+    {
+        return array(
+            'error syntax in expected JSON' => array('{"Mascott"::}', '{"Mascott" : "Tux"}'),
+            'error UTF-8 in actual JSON'    => array('{"Mascott" : "Tux"}', '{"Mascott" : :}'),
+        );
+    }
+
 }

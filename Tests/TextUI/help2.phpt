@@ -30,9 +30,12 @@ Usage: phpunit [switches] UnitTest [UnitTest.php]
   --testdox-text <file>     Write agile documentation in Text format to file.
 
   --filter <pattern>        Filter which tests to run.
+  --testsuite <pattern>     Filter which testsuite to run.
   --group ...               Only runs tests from the specified group(s).
   --exclude-group ...       Exclude tests from the specified group(s).
   --list-groups             List available test groups.
+  --test-suffix ...         Only search for test in files with specified
+                            suffix(es). Default: Test.php,.phpt
 
   --loader <loader>         TestSuiteLoader implementation to use.
   --printer <printer>       TestSuiteListener implementation to use.
@@ -49,7 +52,7 @@ Usage: phpunit [switches] UnitTest [UnitTest.php]
   --stop-on-incomplete      Stop execution upon first incomplete test.
   --strict                  Run tests in strict mode.
   -v|--verbose              Output more verbose information.
-  --debug                   Display debbuging information during test execution.
+  --debug                   Display debugging information during test execution.
 
   --process-isolation       Run each test in a separate PHP process.
   --no-globals-backup       Do not backup and restore $GLOBALS for each test.
@@ -63,5 +66,3 @@ Usage: phpunit [switches] UnitTest [UnitTest.php]
 
   -h|--help                 Prints this usage information.
   --version                 Prints the version and exits.
-
-  --debug                   Output debugging information.

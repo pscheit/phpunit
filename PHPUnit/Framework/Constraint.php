@@ -39,7 +39,7 @@
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @author     Bernhard Schussek <bschussek@2bepublished.at>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.0.0
  */
@@ -52,8 +52,7 @@
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @author     Bernhard Schussek <bschussek@2bepublished.at>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Interface available since Release 3.0.0
  */
@@ -151,7 +150,7 @@ abstract class PHPUnit_Framework_Constraint implements Countable, PHPUnit_Framew
     /**
      * Return additional failure description where needed
      *
-     * The function can be overritten to provide additional failure
+     * The function can be overridden to provide additional failure
      * information like a diff
      *
      * @param  mixed $other Evaluated value or object.

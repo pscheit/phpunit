@@ -38,7 +38,7 @@
  * @subpackage Util
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.4.0
  */
@@ -50,91 +50,12 @@
  * @subpackage Util
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 3.4.0
  */
 abstract class PHPUnit_Util_PHP
 {
-    /**
-     * @var string $phpBinary
-     */
-    protected $phpBinary;
-
-    /**
-     * Returns the path to a PHP interpreter.
-     *
-     * PHPUnit_Util_PHP::$phpBinary contains the path to the PHP
-     * interpreter.
-     *
-     * When not set, the following assumptions will be made:
-     *
-     *   1. When PHPUnit is run using the CLI SAPI and the $_SERVER['_']
-     *      variable does not contain the string "PHPUnit", $_SERVER['_']
-     *      is assumed to contain the path to the current PHP interpreter
-     *      and that will be used.
-     *
-     *   2. When PHPUnit is run using the CLI SAPI and the $_SERVER['_']
-     *      variable contains the string "PHPUnit", the file that $_SERVER['_']
-     *      points to is assumed to be the PHPUnit TextUI CLI wrapper script
-     *      "phpunit" and the binary set up using #! on that file's first
-     *      line of code is assumed to contain the path to the current PHP
-     *      interpreter and that will be used.
-     *
-     *   3. When the PHP CLI/CGI binary configured with the PEAR Installer
-     *      (php_bin configuration value) is readable, it will be used.
-     *
-     *   4. The current PHP interpreter is assumed to be in the $PATH and
-     *      to be invokable through "php".
-     *
-     * @return string
-     */
-    protected function getPhpBinary()
-    {
-        if ($this->phpBinary === NULL) {
-            if (defined("PHP_BINARY")) {
-                $this->phpBinary = PHP_BINARY;
-            } else if (PHP_SAPI == 'cli' && isset($_SERVER['_'])) {
-                if (strpos($_SERVER['_'], 'phpunit') !== FALSE) {
-                    $file = file($_SERVER['_']);
-
-                    if (strpos($file[0], ' ') !== FALSE) {
-                        $tmp = explode(' ', $file[0]);
-                        $this->phpBinary = trim($tmp[1]);
-                    } else {
-                        $this->phpBinary = ltrim(trim($file[0]), '#!');
-                    }
-                } else if (strpos(basename($_SERVER['_']), 'php') !== FALSE) {
-                    $this->phpBinary = $_SERVER['_'];
-                }
-            }
-
-            if ($this->phpBinary === NULL) {
-                $possibleBinaryLocations = array(
-                    PHP_BINDIR . '/php',
-                    PHP_BINDIR . '/php-cli.exe',
-                    PHP_BINDIR . '/php.exe',
-                    '@php_bin@',
-                );
-                foreach ($possibleBinaryLocations as $binary) {
-                    if (is_readable($binary)) {
-                        $this->phpBinary = $binary;
-                        break;
-                    }
-                }
-            }
-
-            if (!is_readable($this->phpBinary)) {
-                $this->phpBinary = 'php';
-            } else {
-                $this->phpBinary = escapeshellcmd($this->phpBinary);
-            }
-        }
-
-        return $this->phpBinary;
-    }
-
     /**
      * @return PHPUnit_Util_PHP
      * @since  Method available since Release 3.5.12
@@ -160,7 +81,7 @@ abstract class PHPUnit_Util_PHP
     public function runJob($job, PHPUnit_Framework_Test $test = NULL, PHPUnit_Framework_TestResult $result = NULL)
     {
         $process = proc_open(
-          $this->getPhpBinary(),
+          PHP_BINARY,
           array(
             0 => array('pipe', 'r'),
             1 => array('pipe', 'w'),
@@ -230,7 +151,21 @@ abstract class PHPUnit_Util_PHP
               new PHPUnit_Framework_Exception(trim($stderr)), $time
             );
         } else {
-            $childResult = @unserialize($stdout);
+            set_error_handler(function($errno, $errstr, $errfile, $errline) {
+                throw new ErrorException($errstr, $errno, $errno, $errfile, $errline);
+            });
+            try {
+                $childResult = unserialize($stdout);
+                restore_error_handler();
+            } catch (ErrorException $e) {
+                restore_error_handler();
+                $childResult = FALSE;
+
+                $time = 0;
+                $result->addError(
+                  $test, new PHPUnit_Framework_Exception(trim($stdout), 0, $e), $time
+                );
+            }
 
             if ($childResult !== FALSE) {
                 if (!empty($childResult['output'])) {
@@ -277,12 +212,6 @@ abstract class PHPUnit_Util_PHP
                       $test, $this->getException($failures[0]), $time
                     );
                 }
-            } else {
-                $time = 0;
-
-                $result->addError(
-                  $test, new PHPUnit_Framework_Exception(trim($stdout)), $time
-                );
             }
         }
 

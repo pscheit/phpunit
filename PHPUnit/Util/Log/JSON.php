@@ -38,7 +38,7 @@
  * @subpackage Util_Log
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.0.0
  */
@@ -50,8 +50,7 @@
  * @subpackage Util_Log
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 3.0.0
  */
@@ -246,10 +245,6 @@ class PHPUnit_Util_Log_JSON extends PHPUnit_Util_Printer implements PHPUnit_Fram
      */
     public function write($buffer)
     {
-        if (defined('JSON_PRETTY_PRINT')) {
-            parent::write(json_encode($buffer, JSON_PRETTY_PRINT));
-        } else {
-            parent::write(json_encode($buffer));
-        }
+        parent::write(json_encode($buffer, JSON_PRETTY_PRINT));
     }
 }

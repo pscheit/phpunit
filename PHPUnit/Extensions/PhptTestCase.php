@@ -38,7 +38,7 @@
  * @subpackage Extensions_PhptTestCase
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.1.4
  */
@@ -56,8 +56,7 @@ if (stream_resolve_include_path('PEAR/RunTest.php')) {
  * @subpackage Extensions_PhptTestCase
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 3.1.4
  */
@@ -163,6 +162,7 @@ class PHPUnit_Extensions_PhptTestCase implements PHPUnit_Framework_Test, PHPUnit
 
         PHP_Timer::start();
 
+        $runner->_php = PHP_BINARY;
         $buffer = $runner->run($this->filename, $options);
         $time   = PHP_Timer::stop();
 

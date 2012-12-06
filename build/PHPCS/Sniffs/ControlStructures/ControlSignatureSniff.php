@@ -14,8 +14,9 @@ class PHPCS_Sniffs_ControlStructures_ControlSignatureSniff extends PHP_CodeSniff
           'for (...) {EOL',
           'if (...) {EOL',
           'foreach (...) {EOL',
-          '}EOLelse if (...) {EOL',
-          '}EOLelse {EOL',
+          // Decide wether to use '}EOLelse' or '} else'
+          #'}EOLelse if (...) {EOL',
+          #'}EOLelse {EOL',
           'do {EOL',
         );
     }

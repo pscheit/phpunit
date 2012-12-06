@@ -38,7 +38,7 @@
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @author     Bernhard Schussek <bschussek@2bepublished.at>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.0.0
  */
@@ -53,8 +53,7 @@ require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . '_files' . DIRECTORY_SEPAR
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @author     Bernhard Schussek <bschussek@2bepublished.at>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 3.0.0
  */
@@ -1807,6 +1806,111 @@ EOF
         }
 
         $this->fail();
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Constraint_Callback
+     */
+    public function testConstraintCallback()
+    {
+        $closureReflect = function($parameter) {
+            return $parameter;
+        };
+
+        $closureWithoutParameter = function() {
+            return TRUE;
+        };
+
+        $constraint = PHPUnit_Framework_Assert::callback($closureWithoutParameter);
+        $this->assertTrue($constraint->evaluate('', '', TRUE));
+
+        $constraint = PHPUnit_Framework_Assert::callback($closureReflect);
+        $this->assertTrue($constraint->evaluate(TRUE, '', TRUE));
+        $this->assertFalse($constraint->evaluate(FALSE, '', TRUE));
+
+        $callback = array($this, 'callbackReturningTrue');
+        $constraint = PHPUnit_Framework_Assert::callback($callback);
+        $this->assertTrue($constraint->evaluate(FALSE,  '', TRUE));
+
+        $callback = array('Framework_ConstraintTest', 'staticCallbackReturningTrue');
+        $constraint = PHPUnit_Framework_Assert::callback($callback);
+        $this->assertTrue($constraint->evaluate(NULL, '', TRUE));
+
+        $this->assertEquals('is accepted by specified callback', $constraint->toString());
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Constraint_Callback
+     * @expectedException PHPUnit_Framework_ExpectationFailedException
+     * @expectedExceptionMessage Failed asserting that 'This fails' is accepted by specified callback.
+     */
+    public function testConstraintCallbackFailure()
+    {
+        $constraint = PHPUnit_Framework_Assert::callback(function() {
+            return FALSE;
+        });
+        $constraint->evaluate('This fails');
+    }
+
+    public function callbackReturningTrue()
+    {
+        return TRUE;
+    }
+
+    public static function staticCallbackReturningTrue()
+    {
+        return TRUE;
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Constraint_Callback
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Specified callback <invalid callback> is not callable.
+     */
+    public function testConstraintCallbackInvalidFunctionArgument()
+    {
+        PHPUnit_Framework_Assert::callback('invalid callback');
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Constraint_Callback
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Specified callback <empty array> is not callable.
+     */
+    public function testConstraintCallbackInvalidArrayArgumentWithEmptyArray()
+    {
+        PHPUnit_Framework_Assert::callback(array());
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Constraint_Callback
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Specified callback <array without indexes 0 and 1 set> is not callable.
+     */
+    public function testConstraintCallbackInvalidArrayArgumentWithBadArray()
+    {
+        PHPUnit_Framework_Assert::callback(array(3 => 'foo'));
+    }
+
+
+    /**
+     * @covers PHPUnit_Framework_Constraint_Callback
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Specified callback <Framework_ConstraintTest::invalid callback> is not callable.
+     */
+    public function testConstraintCallbackInvalidArrayArgumentWithObject()
+    {
+        PHPUnit_Framework_Assert::callback(array($this, 'invalid callback'));
+    }
+
+    /**
+     * @covers PHPUnit_Framework_Constraint_Callback
+     * @expectedException InvalidArgumentException
+     * @expectedExceptionMessage Specified callback <Framework_ConstraintTest::invalid callback> is not callable.
+     */
+    public function testConstraintCallbackInvalidArrayArgumentWithClassname()
+    {
+        PHPUnit_Framework_Assert::callback(array('Framework_ConstraintTest', 'invalid callback'));
     }
 
     /**

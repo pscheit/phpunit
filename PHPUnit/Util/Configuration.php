@@ -38,7 +38,7 @@
  * @subpackage Util
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      File available since Release 3.2.0
  */
@@ -53,7 +53,7 @@
  * <phpunit backupGlobals="true"
  *          backupStaticAttributes="false"
  *          bootstrap="/path/to/bootstrap.php"
- *          cacheTokens="true"
+ *          cacheTokens="false"
  *          colors="false"
  *          convertErrorsToExceptions="true"
  *          convertNoticesToExceptions="true"
@@ -98,7 +98,8 @@
  *         <file>/path/to/file</file>
  *       </exclude>
  *     </blacklist>
- *     <whitelist processUncoveredFilesFromWhitelist="false">
+ *     <whitelist addUncoveredFilesFromWhitelist="true"
+ *                processUncoveredFilesFromWhitelist="false">
  *       <directory suffix=".php">/path/to/files</directory>
  *       <file>/path/to/file</file>
  *       <exclude>
@@ -128,8 +129,8 @@
  *   </listeners>
  *
  *   <logging>
- *     <log type="coverage-html" target="/tmp/report" title="My Project"
-            charset="UTF-8" yui="true" highlight="false"
+ *     <log type="coverage-html" target="/tmp/report"
+            charset="UTF-8" highlight="false"
  *          lowUpperBound="35" highLowerBound="70"/>
  *     <log type="coverage-clover" target="/tmp/clover.xml"/>
  *     <log type="json" target="/tmp/logfile.json"/>
@@ -168,8 +169,7 @@
  * @subpackage Util
  * @author     Sebastian Bergmann <sebastian@phpunit.de>
  * @copyright  2001-2012 Sebastian Bergmann <sebastian@phpunit.de>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    Release: @package_version@
+ * @license    http://www.opensource.org/licenses/BSD-3-Clause  The BSD 3-Clause License
  * @link       http://www.phpunit.de/
  * @since      Class available since Release 3.2.0
  */
@@ -189,7 +189,7 @@ class PHPUnit_Util_Configuration
     protected function __construct($filename)
     {
         $this->filename = $filename;
-        $this->document = PHPUnit_Util_XML::loadFile($filename);
+        $this->document = PHPUnit_Util_XML::loadFile($filename, FALSE, TRUE);
         $this->xpath    = new DOMXPath($this->document);
     }
 
@@ -246,18 +246,29 @@ class PHPUnit_Util_Configuration
      */
     public function getFilterConfiguration()
     {
+        $addUncoveredFilesFromWhitelist     = TRUE;
         $processUncoveredFilesFromWhitelist = FALSE;
 
         $tmp = $this->xpath->query('filter/whitelist');
 
-        if ($tmp->length == 1 &&
-            $tmp->item(0)->hasAttribute('processUncoveredFilesFromWhitelist')) {
-            $processUncoveredFilesFromWhitelist = $this->getBoolean(
-              (string)$tmp->item(0)->getAttribute(
-                'processUncoveredFilesFromWhitelist'
-              ),
-              FALSE
-            );
+        if ($tmp->length == 1) {
+            if ($tmp->item(0)->hasAttribute('addUncoveredFilesFromWhitelist')) {
+                $addUncoveredFilesFromWhitelist = $this->getBoolean(
+                  (string)$tmp->item(0)->getAttribute(
+                    'addUncoveredFilesFromWhitelist'
+                  ),
+                  TRUE
+                );
+            }
+
+            if ($tmp->item(0)->hasAttribute('processUncoveredFilesFromWhitelist')) {
+                $processUncoveredFilesFromWhitelist = $this->getBoolean(
+                  (string)$tmp->item(0)->getAttribute(
+                    'processUncoveredFilesFromWhitelist'
+                  ),
+                  FALSE
+                );
+            }
         }
 
         return array(
@@ -280,6 +291,7 @@ class PHPUnit_Util_Configuration
             )
           ),
           'whitelist' => array(
+            'addUncoveredFilesFromWhitelist' => $addUncoveredFilesFromWhitelist,
             'processUncoveredFilesFromWhitelist' => $processUncoveredFilesFromWhitelist,
             'include' => array(
               'directory' => $this->readFilterDirectories(
@@ -346,9 +358,9 @@ class PHPUnit_Util_Configuration
                 );
             }
 
-            if ($listener->childNodes->item(1) instanceof DOMElement &&
-                $listener->childNodes->item(1)->tagName == 'arguments') {
-                foreach ($listener->childNodes->item(1)->childNodes as $argument) {
+            foreach ($listener->childNodes as $node) {
+              if ($node instanceof DOMElement && $node->tagName == 'arguments') {
+                foreach ($node->childNodes as $argument) {
                     if ($argument instanceof DOMElement) {
                         if ($argument->tagName == 'file' ||
                             $argument->tagName == 'directory') {
@@ -358,6 +370,7 @@ class PHPUnit_Util_Configuration
                         }
                     }
                 }
+              }
             }
 
             $result[] = array(
@@ -403,13 +416,6 @@ class PHPUnit_Util_Configuration
                     $result['highLowerBound'] = (string)$log->getAttribute('highLowerBound');
                 }
 
-                if ($log->hasAttribute('yui')) {
-                    $result['yui'] = $this->getBoolean(
-                      (string)$log->getAttribute('yui'),
-                      TRUE
-                    );
-                }
-
                 if ($log->hasAttribute('highlight')) {
                     $result['highlight'] = $this->getBoolean(
                       (string)$log->getAttribute('highlight'),
@@ -431,6 +437,12 @@ class PHPUnit_Util_Configuration
                 if ($log->hasAttribute('showUncoveredFiles')) {
                     $result['coverageTextShowUncoveredFiles'] = $this->getBoolean(
                       (string)$log->getAttribute('showUncoveredFiles'),
+                      FALSE
+                    );
+                }
+                if ($log->hasAttribute('showOnlySummary')) {
+                    $result['coverageTextShowOnlySummary'] = $this->getBoolean(
+                      (string)$log->getAttribute('showOnlySummary'),
                       FALSE
                     );
                 }
@@ -558,7 +570,7 @@ class PHPUnit_Util_Configuration
 
         if ($root->hasAttribute('cacheTokens')) {
             $result['cacheTokens'] = $this->getBoolean(
-              (string)$root->getAttribute('cacheTokens'), TRUE
+              (string)$root->getAttribute('cacheTokens'), FALSE
             );
         }
 
@@ -758,7 +770,7 @@ class PHPUnit_Util_Configuration
      * @return PHPUnit_Framework_TestSuite
      * @since  Method available since Release 3.2.1
      */
-    public function getTestSuiteConfiguration()
+    public function getTestSuiteConfiguration($testSuiteFilter=null)
     {
         $testSuiteNodes = $this->xpath->query('testsuites/testsuite');
 
@@ -767,7 +779,7 @@ class PHPUnit_Util_Configuration
         }
 
         if ($testSuiteNodes->length == 1) {
-            return $this->getTestSuite($testSuiteNodes->item(0));
+            return $this->getTestSuite($testSuiteNodes->item(0), $testSuiteFilter);
         }
 
         if ($testSuiteNodes->length > 1) {
@@ -775,7 +787,7 @@ class PHPUnit_Util_Configuration
 
             foreach ($testSuiteNodes as $testSuiteNode) {
                 $suite->addTestSuite(
-                  $this->getTestSuite($testSuiteNode)
+                  $this->getTestSuite($testSuiteNode, $testSuiteFilter)
                 );
             }
 
@@ -788,7 +800,7 @@ class PHPUnit_Util_Configuration
      * @return PHPUnit_Framework_TestSuite
      * @since  Method available since Release 3.4.0
      */
-    protected function getTestSuite(DOMElement $testSuiteNode)
+    protected function getTestSuite(DOMElement $testSuiteNode, $testSuiteFilter=null)
     {
         if ($testSuiteNode->hasAttribute('name')) {
             $suite = new PHPUnit_Framework_TestSuite(
@@ -807,6 +819,10 @@ class PHPUnit_Util_Configuration
         $fileIteratorFacade = new File_Iterator_Facade;
 
         foreach ($testSuiteNode->getElementsByTagName('directory') as $directoryNode) {
+            if ($testSuiteFilter && $directoryNode->parentNode->getAttribute('name') != $testSuiteFilter) {
+                continue;
+            }
+            
             $directory = (string)$directoryNode->nodeValue;
 
             if (empty($directory)) {
@@ -851,6 +867,10 @@ class PHPUnit_Util_Configuration
         }
 
         foreach ($testSuiteNode->getElementsByTagName('file') as $fileNode) {
+            if ($testSuiteFilter && $fileNode->parentNode->getAttribute('name') != $testSuiteFilter) {
+                continue;
+            }
+            
             $file = (string)$fileNode->nodeValue;
 
             if (empty($file)) {
